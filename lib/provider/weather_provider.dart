@@ -10,17 +10,19 @@ class WeatherProvider extends ChangeNotifier {
   bool isLoading = true;
   bool isDarkMode = true;
   bool hasError = false;
+  bool isFromSearch = false;
 
   Future<void> loadWeatherByCity(String city) async {
     try {
       isLoading = true;
+      hasError = false;
+      isFromSearch = true; // 👈 important
       notifyListeners();
 
-      final data = await fetchWeatherByCity(city); // create this
+      final data = await fetchWeatherByCity(city);
       weather = WeatherModel.fromJson(data);
 
       isLoading = false;
-      hasError = false;
       notifyListeners();
     } catch (e) {
       hasError = true;
@@ -37,26 +39,59 @@ class WeatherProvider extends ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final weather = jsonDecode(response.body);
+
+      return {
+        'city': weather['name'],
+        'temp': weather['main']['temp'],
+        'condition': weather['weather'][0]['main'],
+        'humidity': weather['main']['humidity'],
+        'wind': weather['wind']['speed'],
+        'rain': weather['rain']?['1h'] ?? 0,
+        'aqi': 1,
+        'forecast': [],
+      };
     } else {
       throw Exception("Failed to load city weather");
     }
   }
 
   Future<void> loadWeather() async {
+    print("STEP 1: loadWeather started");
+
     try {
       isLoading = true;
       hasError = false;
       notifyListeners();
 
-      final position = await getLocation();
-      final data = await fetchWeather(position.latitude, position.longitude);
+      Map<String, dynamic> data;
 
+      try {
+        print("STEP 2: Getting location...");
+        final position = await getLocation();
+        print("STEP 3: Location received");
+
+        data = await fetchWeather(position.latitude, position.longitude);
+        print("STEP 4: Weather fetched from GPS");
+      } catch (e) {
+        print("GPS FAILED: $e");
+        print("STEP 5: Fetching London instead");
+
+        data = await fetchWeatherByCity("London");
+        print("STEP 6: London fetched");
+      }
+
+      print("STEP 7: Converting to model");
       weather = WeatherModel.fromJson(data);
 
+      print("STEP 8: Done successfully");
       isLoading = false;
       notifyListeners();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print("FINAL ERROR:");
+      print(e);
+      print(stackTrace);
+
       isLoading = false;
       hasError = true;
       notifyListeners();

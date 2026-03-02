@@ -52,13 +52,10 @@ class HomeScreen extends StatelessWidget {
           );
         }
 
-        if (provider.hasError) {
-          return Scaffold(
+        if (provider.weather == null) {
+          return const Scaffold(
             body: Center(
-              child: ElevatedButton(
-                onPressed: provider.loadWeather,
-                child: const Text("Retry"),
-              ),
+              child: CircularProgressIndicator(),
             ),
           );
         }
@@ -68,8 +65,10 @@ class HomeScreen extends StatelessWidget {
 
         final textPrimary = isDark ? Colors.white : const Color(0xFF1E293B);
         final textSecondary = isDark ? Colors.white70 : const Color(0xFF64748B);
-        final cardColor =
-            isDark ? Colors.white.withOpacity(0.08) : Colors.white;
+
+        final cardColor = isDark
+            ? Colors.white.withOpacity(0.08)
+            : Colors.white.withOpacity(0.95);
 
         return Scaffold(
           body: AnimatedContainer(
@@ -84,181 +83,246 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             child: SafeArea(
-              child: RefreshIndicator(
-                onRefresh: provider.loadWeather,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      /// THEME BUTTON
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          /// SEARCH BUTTON
-                          IconButton(
-                            icon: Icon(Icons.search, color: textPrimary),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  String cityName = "";
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            /// TOP ACTIONS
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                /// LOCATION BUTTON
+                                IconButton(
+                                  icon: Icon(Icons.my_location,
+                                      color: textPrimary),
+                                  onPressed:
+                                      provider.loadWeather, // fetch GPS again
+                                ),
 
-                                  return AlertDialog(
-                                    title: const Text("Search City"),
-                                    content: TextField(
-                                      decoration: const InputDecoration(
-                                        hintText: "Enter city name",
-                                      ),
-                                      onChanged: (value) {
-                                        cityName = value;
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.search,
+                                          color: textPrimary),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) {
+                                            String cityName = "";
+                                            return AlertDialog(
+                                              title: const Text("Search City"),
+                                              content: TextField(
+                                                decoration:
+                                                    const InputDecoration(
+                                                        hintText:
+                                                            "Enter city name"),
+                                                onChanged: (value) {
+                                                  cityName = value;
+                                                },
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    provider.loadWeatherByCity(
+                                                        cityName);
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: const Text("Search"),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
                                       },
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          provider.loadWeatherByCity(cityName);
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text("Search"),
+                                    IconButton(
+                                      icon: Icon(
+                                        isDark
+                                            ? Icons.light_mode
+                                            : Icons.dark_mode,
+                                        color: textPrimary,
                                       ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                          ),
-
-                          /// THEME BUTTON
-                          IconButton(
-                            icon: Icon(
-                              isDark ? Icons.light_mode : Icons.dark_mode,
-                              color: textPrimary,
-                            ),
-                            onPressed: provider.toggleTheme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      /// CITY
-                      Text(
-                        weather.city,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                          color: textPrimary,
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      /// LOTTIE
-                      SizedBox(
-                        height: 160,
-                        child: Lottie.asset(
-                          getAnimation(weather.condition),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          "AQI ${weather.aqi}",
-                          style: TextStyle(color: textPrimary),
-                        ),
-                      ),
-
-                      /// TEMP
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        child: Text(
-                          "${weather.temperature}°",
-                          key: ValueKey(weather.temperature),
-                          style: TextStyle(
-                            fontSize: 80,
-                            fontWeight: FontWeight.w300,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ),
-
-                      Text(
-                        weather.condition,
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: textSecondary,
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      /// INFO CARDS
-                      Row(
-                        children: [
-                          _infoCard(
-                            "Humidity",
-                            "${weather.humidity}%",
-                            Icons.water_drop,
-                            cardColor,
-                            textPrimary,
-                          ),
-                          const SizedBox(width: 12),
-                          _infoCard(
-                            "Wind",
-                            "${(weather.wind * 3.6).toStringAsFixed(1)} km/h",
-                            Icons.air,
-                            cardColor,
-                            textPrimary,
-                          ),
-                          const SizedBox(width: 12),
-                          _infoCard(
-                            "Rain",
-                            "${weather.rain} mm",
-                            Icons.umbrella,
-                            cardColor,
-                            textPrimary,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      /// FORECAST
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: weather.forecast.take(5).map((item) {
-                            return Column(
-                              children: [
-                                Text(item.time,
-                                    style: TextStyle(color: textPrimary)),
-                                const SizedBox(height: 6),
-                                Icon(getIcon(item.condition),
-                                    color: textPrimary),
-                                const SizedBox(height: 6),
-                                Text("${item.temp}°",
-                                    style: TextStyle(color: textPrimary)),
+                                      onPressed: provider.toggleTheme,
+                                    ),
+                                  ],
+                                ),
                               ],
-                            );
-                          }).toList(),
+                            ),
+                            const SizedBox(height: 20),
+
+                            /// CITY
+                            Text(
+                              weather.city,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: textPrimary,
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            /// LOTTIE
+                            SizedBox(
+                              height: 160,
+                              child: Lottie.asset(
+                                getAnimation(weather.condition),
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: textPrimary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                provider.isFromSearch
+                                    ? "Searched Location"
+                                    : "Current Location",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            /// AQI
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: cardColor,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                "AQI ${weather.aqi}",
+                                style: TextStyle(color: textPrimary),
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            /// TEMP
+                            Text(
+                              "${weather.temperature}°",
+                              style: TextStyle(
+                                fontSize: 80,
+                                fontWeight: FontWeight.w300,
+                                color: textPrimary,
+                              ),
+                            ),
+
+                            Text(
+                              weather.condition,
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: textSecondary,
+                              ),
+                            ),
+
+                            const SizedBox(height: 40),
+
+                            /// INFO CARDS (Responsive)
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _infoCard(
+                                  "Humidity",
+                                  "${weather.humidity}%",
+                                  Icons.water_drop,
+                                  cardColor,
+                                  textPrimary,
+                                ),
+                                _infoCard(
+                                  "Wind",
+                                  "${(weather.wind * 3.6).toStringAsFixed(1)} km/h",
+                                  Icons.air,
+                                  cardColor,
+                                  textPrimary,
+                                ),
+                                _infoCard(
+                                  "Rain",
+                                  "${weather.rain} mm",
+                                  Icons.umbrella,
+                                  cardColor,
+                                  textPrimary,
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 40),
+
+                            /// FORECAST
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: cardColor,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children:
+                                      weather.forecast.take(5).map((item) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 24),
+                                      child: Column(
+                                        children: [
+                                          Text(item.time,
+                                              style: TextStyle(
+                                                  color: textPrimary)),
+                                          const SizedBox(height: 6),
+                                          Icon(getIcon(item.condition),
+                                              color: textPrimary),
+                                          const SizedBox(height: 6),
+                                          Text("${item.temp}°",
+                                              style: TextStyle(
+                                                  color: textPrimary)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 80),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -274,12 +338,20 @@ class HomeScreen extends StatelessWidget {
     Color cardColor,
     Color textColor,
   ) {
-    return Expanded(
+    return SizedBox(
+      width: 220,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           children: [
