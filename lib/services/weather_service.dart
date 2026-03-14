@@ -20,42 +20,49 @@ Future<Map<String, dynamic>> fetchWeather(double lat, double lon) async {
   final forecastUrl =
       'https://api.openweathermap.org/data/2.5/forecast?lat=$lat&lon=$lon&units=metric&appid=$apiKey';
 
-  final forecastRes = await http.get(Uri.parse(forecastUrl));
-  final forecast = jsonDecode(forecastRes.body);
-
+  // ✅ FIX: Check status codes on every request
   final weatherRes = await http.get(Uri.parse(weatherUrl));
+  if (weatherRes.statusCode != 200) {
+    throw Exception(
+        'Weather API failed: ${weatherRes.statusCode} - ${weatherRes.body}');
+  }
+
+  final forecastRes = await http.get(Uri.parse(forecastUrl));
+  if (forecastRes.statusCode != 200) {
+    throw Exception(
+        'Forecast API failed: ${forecastRes.statusCode} - ${forecastRes.body}');
+  }
+
   final airRes = await http.get(Uri.parse(airUrl));
-
-  Future<Map<String, dynamic>> fetchWeatherByCity(String city) async {
-    final response = await http.get(
-      Uri.parse("YOUR_API_URL&q=$city&appid=YOUR_KEY"),
-    );
-
-    return jsonDecode(response.body);
+  if (airRes.statusCode != 200) {
+    throw Exception(
+        'Air quality API failed: ${airRes.statusCode} - ${airRes.body}');
   }
 
   final weather = jsonDecode(weatherRes.body);
+  final forecast = jsonDecode(forecastRes.body);
   final air = jsonDecode(airRes.body);
-  double pm25 = air['list'][0]['components']['pm2_5'];
+
+  double pm25 = (air['list'][0]['components']['pm2_5'] as num).toDouble();
   List forecastList = forecast['list'];
 
   List<Map<String, dynamic>> nextFive = forecastList.take(5).map((item) {
     return {
       'time': item['dt_txt'].toString().substring(11, 16),
-      'temp': item['main']['temp'].round(),
+      'temp': (item['main']['temp'] as num).round(), // ✅ safe cast
       'condition': item['weather'][0]['main'],
     };
   }).toList();
 
   return {
     'city': weather['name'],
-    'temp': weather['main']['temp'].round(),
+    'temp': (weather['main']['temp'] as num)
+        .toDouble(), // ✅ FIX: returns double not int
     'condition': weather['weather'][0]['main'],
     'aqi': convertAqi(pm25),
-
     'humidity': weather['main']['humidity'],
-    'wind': weather['wind']['speed'], // in m/s
-    'rain': weather['rain']?['1h'] ?? 0, // safe null handling
+    'wind': (weather['wind']['speed'] as num).toDouble(), // ✅ safe cast
+    'rain': (weather['rain']?['1h'] as num?)?.toDouble() ?? 0.0, // ✅ safe cast
     'forecast': nextFive,
   };
 }

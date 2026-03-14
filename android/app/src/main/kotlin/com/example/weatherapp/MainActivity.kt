@@ -1,4 +1,4 @@
-package com.example.weatherapp
+package com.harshpareek.nimbusnow
 
 import io.flutter.embedding.android.FlutterActivity
 

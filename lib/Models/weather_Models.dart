@@ -1,12 +1,14 @@
+import 'package:weather_app/Models/forcast_model.dart';
+
 class WeatherModel {
   final String city;
-  final double temperature;
+  final int temperature;
   final String condition;
   final int humidity;
   final double wind;
   final double rain;
   final int aqi;
-  final List<dynamic> forecast;
+  final List forecast;
 
   WeatherModel({
     required this.city,
@@ -19,19 +21,18 @@ class WeatherModel {
     required this.forecast,
   });
 
-  /// ✅ THIS IS WHAT YOU WERE MISSING
-  factory WeatherModel.fromJson(Map<String, dynamic> json) {
+  factory WeatherModel.fromJson(Map json) {
     return WeatherModel(
-      city: json['name'] ?? "",
-      temperature: (json['main']?['temp'] ?? 0).toDouble(),
-      condition: json['weather'] != null && json['weather'].isNotEmpty
-          ? json['weather'][0]['main']
-          : "Unknown",
-      humidity: json['main']?['humidity'] ?? 0,
-      wind: (json['wind']?['speed'] ?? 0).toDouble(),
-      rain: json['rain'] != null ? (json['rain']['1h'] ?? 0).toDouble() : 0,
-      aqi: 1,
-      forecast: [], // 🔥 THIS IS THE IMPORTANT PART
+      city: json['city'] ?? "Unknown",
+      temperature: (json['temp'] as num?)?.toInt() ?? 0,
+      condition: json['condition'] ?? "Clear",
+      humidity: (json['humidity'] as num?)?.toInt() ?? 0,
+      wind: (json['wind'] as num?)?.toDouble() ?? 0.0,
+      rain: (json['rain'] as num?)?.toDouble() ?? 0.0,
+      aqi: (json['aqi'] as num?)?.toInt() ?? 1,
+      forecast: (json['forecast'] as List? ?? [])
+          .map((item) => ForecastModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(),
     );
   }
 }
